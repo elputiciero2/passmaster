@@ -67,7 +67,7 @@ class TicketService {
       // 3. Procesar el pago con la pasarela seleccionada
       const paymentResult = await PaymentService.processPayment({
         amount: totalAmount,
-        currency: 'usd',
+        currency: 'cop',
         paymentMethod: paymentInfo.method || 'card',
         token: paymentInfo.token || null,
         orderNumber

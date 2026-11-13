@@ -86,6 +86,8 @@ export default function EventDetailPage({ eventId, onBack, onPurchaseSuccess, on
     }
   };
 
+  const formatCOP = (val) => `$ ${Math.round(Number(val) || 0).toLocaleString('es-CO')} COP`;
+
   if (loading) {
     return (
       <div className="py-12 flex justify-center">
@@ -112,7 +114,7 @@ export default function EventDetailPage({ eventId, onBack, onPurchaseSuccess, on
           <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-left text-xs space-y-2">
             <div className="flex justify-between text-slate-400">
               <span>Total Abonado:</span>
-              <span className="font-bold text-white text-sm">${parseFloat(successData.totalAmount).toFixed(2)} USD</span>
+              <span className="font-bold text-white text-sm">{formatCOP(successData.totalAmount)}</span>
             </div>
             <div className="flex justify-between text-slate-400">
               <span>Pasarela de Pago:</span>
@@ -234,8 +236,8 @@ export default function EventDetailPage({ eventId, onBack, onPurchaseSuccess, on
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-black text-white">${parseFloat(tier.price).toFixed(2)}</span>
-                    <span className="text-[10px] text-slate-400 block uppercase">c/u USD</span>
+                    <span className="text-xl font-black text-white">{formatCOP(tier.price)}</span>
+                    <span className="text-[10px] text-slate-400 block uppercase">c/u</span>
                   </div>
                 </div>
 
@@ -333,11 +335,11 @@ export default function EventDetailPage({ eventId, onBack, onPurchaseSuccess, on
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Subtotal:</span>
-                <span>${calculateTotal().toFixed(2)} USD</span>
+                <span>{formatCOP(calculateTotal())}</span>
               </div>
               <div className="flex justify-between text-base font-black text-white pt-2 border-t border-slate-800">
                 <span>Total a Pagar:</span>
-                <span className="text-emerald-400">${calculateTotal().toFixed(2)} USD</span>
+                <span className="text-emerald-400">{formatCOP(calculateTotal())}</span>
               </div>
             </div>
 

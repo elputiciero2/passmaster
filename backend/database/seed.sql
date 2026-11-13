@@ -22,9 +22,9 @@ ON DUPLICATE KEY UPDATE `title` = VALUES(`title`);
 
 -- Localidades / Tiers para el Evento 1
 INSERT INTO `ticket_tiers` (`id`, `event_id`, `name`, `description`, `price`, `total_quantity`, `available_quantity`) VALUES
-(1, 1, 'Entrada General', 'Acceso a conferencias generales y zona de stands.', 45.00, 350, 350),
-(2, 1, 'Pase VIP + Afterparty', 'Asientos preferenciales frontales, acceso a salas de networking VIP y cóctel de clausura.', 120.00, 100, 100),
-(3, 1, 'Early Bird Estudiante', 'Tarifa reducida para estudiantes universitarios con credencial vigente.', 25.00, 50, 50),
-(4, 2, 'Pista General', 'Acceso a pista principal.', 30.00, 200, 200),
-(5, 2, 'Palco VIP', 'Zona elevada exclusiva con barra libre.', 90.00, 100, 100)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+(1, 1, 'Entrada General', 'Acceso a conferencias generales y zona de stands comerciales.', 75000.00, 350, 350),
+(2, 1, 'Pase VIP + Afterparty', 'Asientos preferenciales frontales y cóctel de clausura.', 180000.00, 100, 100),
+(3, 1, 'Early Bird Estudiante', 'Tarifa reducida para estudiantes con credencial vigente.', 45000.00, 50, 50),
+(4, 2, 'Pista General', 'Acceso a pista principal.', 75000.00, 200, 200),
+(5, 2, 'Palco VIP', 'Zona elevada exclusiva con barra libre.', 180000.00, 100, 100)
+ON DUPLICATE KEY UPDATE `name` = VALUES(`name`), `price` = VALUES(`price`);

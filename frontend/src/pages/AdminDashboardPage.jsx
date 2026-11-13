@@ -31,8 +31,8 @@ export default function AdminDashboardPage() {
     banner_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200',
     status: 'PUBLISHED',
     tiers: [
-      { name: 'General', description: 'Acceso Estándar', price: 30, total_quantity: 400 },
-      { name: 'VIP', description: 'Acceso Preferencial', price: 80, total_quantity: 100 }
+      { name: 'General', description: 'Acceso Estándar', price: 50000, total_quantity: 400 },
+      { name: 'VIP', description: 'Acceso Preferencial', price: 150000, total_quantity: 100 }
     ]
   };
 
@@ -96,7 +96,7 @@ export default function AdminDashboardPage() {
       ...formData,
       tiers: [
         ...formData.tiers,
-        { name: 'Nueva Localidad', description: 'Acceso', price: 50, total_quantity: 100 }
+        { name: 'Nueva Localidad', description: 'Acceso', price: 80000, total_quantity: 100 }
       ]
     });
   };
@@ -677,7 +677,7 @@ export default function AdminDashboardPage() {
                   </div>
 
                   <div className="col-span-3">
-                    <label className="text-[10px] text-slate-400 block uppercase">Precio ($)</label>
+                    <label className="text-[10px] text-slate-400 block uppercase">Precio ($ COP)</label>
                     <input
                       type="number"
                       step="0.01"

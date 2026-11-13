@@ -92,7 +92,7 @@ export default function MyTicketsPage() {
 
                   <h3 className="text-base font-bold text-white mt-3 line-clamp-1">{tkt.event_title}</h3>
                   <p className="text-xs font-semibold text-slate-300 mt-0.5">
-                    Localidad: <span className="text-emerald-400">{tkt.tier_name}</span> (${parseFloat(tkt.tier_price).toFixed(2)})
+                    Localidad: <span className="text-emerald-400">{tkt.tier_name}</span> ($ {Math.round(Number(tkt.tier_price) || 0).toLocaleString('es-CO')} COP)
                   </p>
 
                   <div className="mt-3 space-y-1 text-xs text-slate-400">

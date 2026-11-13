@@ -14,7 +14,7 @@ class PaymentService {
   /**
    * Procesa el cobro a través de Stripe o Sandbox Simulator
    */
-  static async processPayment({ amount, currency = 'usd', paymentMethod = 'card', token = null, orderNumber }) {
+  static async processPayment({ amount, currency = 'cop', paymentMethod = 'card', token = null, orderNumber }) {
     // Si hay una clave real de Stripe configurada y recibimos un token/payment_method
     if (stripe && token) {
       try {
