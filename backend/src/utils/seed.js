@@ -16,6 +16,13 @@ async function runSeed() {
   try {
     console.log('[Seed] Conectando a passmaster_db para poblar datos de prueba...');
 
+    // Los eventos no tienen clave única: sembrar dos veces los duplicaría
+    const [[{ total }]] = await connection.query('SELECT COUNT(*) AS total FROM users');
+    if (total > 0) {
+      console.log('[Seed] La base ya tiene datos, se omite el seed.');
+      return;
+    }
+
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash('Password123!', salt);
 
