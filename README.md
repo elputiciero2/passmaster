@@ -54,18 +54,52 @@ docs/
     user-guide.md
 ```
 
-## Puesta en Marcha con Docker
+## Instalación y Uso con Docker
 
-Con Docker instalado, desde la raíz del repositorio:
+Requisitos: Git y Docker con Docker Compose.
+
+1. Clonar el repositorio en la carpeta actual. La carpeta debe estar vacía; el punto final indica que se clone ahí mismo y no en una subcarpeta:
+```bash
+git clone https://github.com/elputiciero2/passmaster .
+```
+Si se prefiere que Git cree la carpeta:
+```bash
+git clone https://github.com/elputiciero2/passmaster
+cd passmaster
+```
+
+2. Elegir la rama. `main` es la versión base y `main-modoseguro` es la versión con las medidas de seguridad:
+```bash
+git checkout main
+```
+
+3. Levantar el sistema completo:
 ```bash
 docker compose up --build
 ```
-Ese comando levanta MySQL, crea las tablas, carga los datos de demostración e inicia el backend y el frontend.
+Ese comando levanta MySQL, crea las tablas, carga los datos de demostración e inicia el backend y el frontend. La primera vez tarda unos minutos porque descarga y construye las imágenes.
 
+4. Abrir la aplicación e iniciar sesión con una de las cuentas de demostración que aparecen más abajo:
 - Aplicación web: http://localhost:8080
 - API: http://localhost:5000/api (también disponible en http://localhost:8080/api)
 
-Para detener el sistema: `docker compose down`. Para borrar también la base de datos y empezar de cero: `docker compose down -v`.
+Comandos de uso diario:
+
+| Acción | Comando |
+| :--- | :--- |
+| Levantar en segundo plano | `docker compose up --build -d` |
+| Ver el estado de los contenedores | `docker compose ps` |
+| Ver los registros del backend | `docker compose logs -f backend` |
+| Detener el sistema, conservando los datos | `docker compose down` |
+| Detener y borrar la base de datos | `docker compose down -v` |
+| Actualizar el código | `git pull` y luego `docker compose up --build` |
+
+Al cambiar de una rama a otra hay que reiniciar la base de datos, porque cada rama la configura distinto:
+```bash
+docker compose down -v
+git checkout main-modoseguro
+docker compose up --build
+```
 
 ## Puesta en Marcha Manual (sin Docker)
 
@@ -490,6 +524,14 @@ Administración:
 - Con Docker: solo Docker con Docker Compose.
 - Sin Docker: Node.js 18 o superior y MySQL 8.0.
 - Un navegador moderno (Chrome, Firefox o Edge). El escáner necesita permiso de cámara, y los navegadores solo lo conceden en `localhost` o en sitios con HTTPS.
+
+### Obtener y lanzar el proyecto
+
+1. Clona el repositorio en una carpeta vacía: `git clone https://github.com/elputiciero2/passmaster .`
+2. Levanta el sistema: `docker compose up --build`
+3. Espera a que el backend indique que está en ejecución y abre `http://localhost:8080`.
+
+El detalle de cada paso y los comandos para detener, reiniciar o cambiar de rama están en la sección "Instalación y Uso con Docker".
 
 ### Ingresar a la plataforma
 
