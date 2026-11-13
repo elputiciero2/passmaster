@@ -14,6 +14,15 @@ Manual técnico y operativo para la puesta en marcha y utilización del sistema 
 
 ## 2. Configuración y Puesta en Marcha
 
+### Opción recomendada: Docker (un solo comando)
+Con Docker instalado, desde la raíz del repositorio:
+```bash
+docker compose up --build
+```
+Esto levanta MySQL, crea las tablas, carga los datos de demostración e inicia backend y frontend. La aplicación queda en `http://localhost:8080` y la API en `http://localhost:5000/api`. Las credenciales son las del Paso 2. Con `docker compose down -v` se borra la base de datos para empezar de cero.
+
+Los pasos siguientes son la alternativa manual, sin Docker.
+
 ### Paso 1: Configurar la Base de Datos MySQL
 1. Inicia el servicio de MySQL (por ejemplo, desde la interfaz de **Laragon** pulsando *"Iniciar Todo"*, o en **XAMPP** iniciando el módulo *MySQL*).
 2. Abre la consola o terminal y dirígete al directorio del backend:
