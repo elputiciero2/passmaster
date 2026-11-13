@@ -537,7 +537,7 @@ El detalle de cada paso y los comandos para detener, reiniciar o cambiar de rama
 
 1. Abre la aplicación (`http://localhost:8080` con Docker).
 2. Pulsa **Ingresar** en la esquina superior derecha.
-3. Inicia sesión con tu correo y contraseña, o cambia a registro para crear una cuenta de **Cliente** o de **Staff Check-in**.
+3. Inicia sesión con tu correo y contraseña, o cambia a registro para crear una cuenta de comprador. Los botones Admin, Staff Check-in y Cliente rellenan las credenciales de las cuentas de demostración.
 
 El catálogo de eventos se puede explorar sin iniciar sesión; para comprar sí hace falta una cuenta.
 
