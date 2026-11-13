@@ -2,6 +2,10 @@ const Ticket = require('../models/Ticket');
 const CheckInLog = require('../models/CheckInLog');
 const QRService = require('../services/qrService');
 const { verifyTicketSignature } = require('../utils/cryptoUtils');
+const { isStr, toInt } = require('../utils/validate');
+
+// La firma del QR nunca vuelve al escáner: quien la tenga puede clonar el boleto
+const publicTicket = ({ qr_signature, ...ticket }) => ticket;
 
 class CheckInController {
   /**
@@ -9,10 +13,11 @@ class CheckInController {
    */
   static async verifyAndCheckIn(req, res) {
     try {
-      const { qrData, eventId, deviceInfo } = req.body;
+      const { qrData, eventId, deviceInfo } = req.body || {};
       const staffUserId = req.user.id;
+      const device = isStr(deviceInfo, 100) ? deviceInfo.trim() : 'Web Scanner';
 
-      if (!qrData) {
+      if (!isStr(qrData, 1000)) {
         return res.status(400).json({
           success: false,
           result: 'INVALID',
@@ -20,12 +25,23 @@ class CheckInController {
         });
       }
 
+      const event = eventId === undefined || eventId === null ? null : toInt(eventId, 1, 4294967295);
+      if (eventId !== undefined && eventId !== null && event === null) {
+        return res.status(400).json({ success: false, result: 'INVALID', message: 'Evento inválido.' });
+      }
+
       // 1. Extraer código y firma
       const parsed = QRService.parseAndValidate(qrData);
-      const ticketCode = parsed.ticketCode;
+      if (!parsed.valid) {
+        return res.status(400).json({
+          success: false,
+          result: 'INVALID',
+          message: 'Código QR no reconocido.'
+        });
+      }
 
       // 2. Buscar ticket en la base de datos
-      const ticket = await Ticket.findByCode(ticketCode);
+      const ticket = await Ticket.findByCode(parsed.ticketCode);
 
       if (!ticket) {
         return res.status(404).json({
@@ -35,20 +51,21 @@ class CheckInController {
         });
       }
 
+      const log = (result, note = '') => CheckInLog.create({
+        ticket_id: ticket.id,
+        scanned_by_user_id: staffUserId,
+        result,
+        device_info: `${device}${note}`
+      });
+
       // 3. Validar evento correspondiente (si se especificó en el puesto de acceso)
-      if (eventId && parseInt(eventId, 10) !== ticket.event_id) {
-        await CheckInLog.create({
-          ticket_id: ticket.id,
-          scanned_by_user_id: staffUserId,
-          result: 'INVALID',
-          device_info: `${deviceInfo || 'Scanner'} (Evento incorrecto: intentó ingresar a evento ${eventId})`
-        });
+      if (event && event !== ticket.event_id) {
+        await log('INVALID', ` (Evento incorrecto: intentó ingresar a evento ${event})`);
 
         return res.status(400).json({
           success: false,
           result: 'WRONG_EVENT',
-          message: `Este boleto pertenece a otro evento: "${ticket.event_title}".`,
-          data: { ticket }
+          message: `Este boleto pertenece a otro evento: "${ticket.event_title}".`
         });
       }
 
@@ -62,12 +79,7 @@ class CheckInController {
         );
 
         if (!isSignatureValid) {
-          await CheckInLog.create({
-            ticket_id: ticket.id,
-            scanned_by_user_id: staffUserId,
-            result: 'INVALID',
-            device_info: `${deviceInfo || 'Scanner'} (Firma digital inválida / Falsificación detectada)`
-          });
+          await log('INVALID', ' (Firma digital inválida / Falsificación detectada)');
 
           return res.status(400).json({
             success: false,
@@ -78,53 +90,38 @@ class CheckInController {
       }
 
       // 5. Validar estado del ticket
-      if (ticket.status === 'CHECKED_IN') {
-        // Ya fue utilizado anteriormente
-        await CheckInLog.create({
-          ticket_id: ticket.id,
-          scanned_by_user_id: staffUserId,
-          result: 'ALREADY_USED',
-          device_info: deviceInfo || 'Web Scanner'
-        });
-
-        return res.status(409).json({
-          success: false,
-          result: 'ALREADY_USED',
-          message: `¡BOLETO YA UTILIZADO! Primer ingreso registrado el ${new Date(ticket.checked_in_at).toLocaleString()}`,
-          data: {
-            ticket,
-            checkedInAt: ticket.checked_in_at
-          }
-        });
-      }
-
       if (ticket.status === 'CANCELLED') {
-        await CheckInLog.create({
-          ticket_id: ticket.id,
-          scanned_by_user_id: staffUserId,
-          result: 'CANCELLED',
-          device_info: deviceInfo || 'Web Scanner'
-        });
+        await log('CANCELLED');
 
         return res.status(400).json({
           success: false,
           result: 'CANCELLED',
           message: 'El boleto se encuentra cancelado o reembolsado.',
-          data: { ticket }
+          data: { ticket: publicTicket(ticket) }
         });
       }
 
-      // 6. Transición exitosa de estado: ACTIVE -> CHECKED_IN
+      // 6. Transición ACTIVE -> CHECKED_IN. Si no cambia ninguna fila, el boleto ya había ingresado
+      //    (antes o en un escaneo simultáneo)
       const now = new Date();
-      await Ticket.updateStatus(ticket.id, 'CHECKED_IN', now);
+      const admitted = await Ticket.checkIn(ticket.id, now);
 
-      // Registrar auditoría exitosa
-      await CheckInLog.create({
-        ticket_id: ticket.id,
-        scanned_by_user_id: staffUserId,
-        result: 'SUCCESS',
-        device_info: deviceInfo || 'Web Scanner'
-      });
+      if (!admitted) {
+        await log('ALREADY_USED');
+        const current = await Ticket.findByCode(ticket.ticket_code);
+
+        return res.status(409).json({
+          success: false,
+          result: 'ALREADY_USED',
+          message: `¡BOLETO YA UTILIZADO! Primer ingreso registrado el ${new Date(current.checked_in_at).toLocaleString()}`,
+          data: {
+            ticket: publicTicket(current),
+            checkedInAt: current.checked_in_at
+          }
+        });
+      }
+
+      await log('SUCCESS');
 
       return res.json({
         success: true,
@@ -132,7 +129,7 @@ class CheckInController {
         message: '¡ACCESO AUTORIZADO! Entrada válida.',
         data: {
           ticket: {
-            ...ticket,
+            ...publicTicket(ticket),
             status: 'CHECKED_IN',
             checked_in_at: now
           }
@@ -149,8 +146,8 @@ class CheckInController {
 
   static async getEventLogs(req, res) {
     try {
-      const { eventId } = req.params;
-      const logs = await CheckInLog.getLogsByEvent(eventId);
+      const eventId = toInt(req.params.eventId, 1, 4294967295);
+      const logs = eventId === null ? [] : await CheckInLog.getLogsByEvent(eventId);
 
       return res.json({
         success: true,

@@ -14,7 +14,8 @@ const pool = mysql.createPool({
   queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
-  multipleStatements: true
+  // Un objeto en un parámetro se trata como texto, no como "columna = valor" (evita inyección por tipo)
+  stringifyObjects: true
 });
 
 module.exports = pool;

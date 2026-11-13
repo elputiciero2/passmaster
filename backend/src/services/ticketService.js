@@ -1,8 +1,12 @@
 const pool = require('../config/db');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { generateTicketSignature } = require('../utils/cryptoUtils');
-const QRService = require('./qrService');
 const PaymentService = require('./paymentService');
+
+// Error de negocio: su mensaje es seguro para mostrarlo al comprador
+class PurchaseError extends Error {}
+
+const randomCode = (bytes) => crypto.randomBytes(bytes).toString('hex').toUpperCase();
 
 class TicketService {
   /**
@@ -24,7 +28,7 @@ class TicketService {
         const qty = parseInt(item.quantity, 10);
 
         if (!tierId || qty <= 0) {
-          throw new Error('Identificador de localidad o cantidad no válida.');
+          throw new PurchaseError('Identificador de localidad o cantidad no válida.');
         }
 
         const [tiers] = await connection.query(
@@ -36,17 +40,17 @@ class TicketService {
         );
 
         if (tiers.length === 0) {
-          throw new Error(`La localidad con ID ${tierId} no existe.`);
+          throw new PurchaseError(`La localidad con ID ${tierId} no existe.`);
         }
 
         const tier = tiers[0];
 
         if (tier.event_status !== 'PUBLISHED') {
-          throw new Error(`El evento "${tier.event_title}" no se encuentra activo.`);
+          throw new PurchaseError(`El evento "${tier.event_title}" no se encuentra activo.`);
         }
 
         if (tier.available_quantity < qty) {
-          throw new Error(
+          throw new PurchaseError(
             `Cupo insuficiente para "${tier.name}". Solicitados: ${qty}, disponibles: ${tier.available_quantity}.`
           );
         }
@@ -62,19 +66,19 @@ class TicketService {
       }
 
       // 2. Generar número único de orden
-      const orderNumber = `PM-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const orderNumber = `PM-${randomCode(6)}`;
 
       // 3. Procesar el pago con la pasarela seleccionada
       const paymentResult = await PaymentService.processPayment({
         amount: totalAmount,
         currency: 'usd',
-        paymentMethod: paymentInfo.method || 'card',
-        token: paymentInfo.token || null,
+        card: paymentInfo.card,
+        token: paymentInfo.token,
         orderNumber
       });
 
       if (!paymentResult.success) {
-        throw new Error(`El pago fue rechazado por la pasarela: ${paymentResult.error || 'Error desconocido'}`);
+        throw new PurchaseError(`El pago fue rechazado por la pasarela: ${paymentResult.error || 'Error desconocido'}`);
       }
 
       // 4. Crear la orden de compra en MySQL
@@ -98,7 +102,8 @@ class TicketService {
         );
 
         for (let i = 0; i < item.quantity; i++) {
-          const ticketCode = `TKT-${uuidv4().substring(0, 8).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+          // 64 bits aleatorios: el código no se puede adivinar ni deducir de la hora de compra
+          const ticketCode = `TKT-${randomCode(4)}-${randomCode(4)}`;
           const qrSignature = generateTicketSignature(ticketCode, item.tier.id, orderId);
 
           const [ticketInsert] = await connection.query(
@@ -138,3 +143,4 @@ class TicketService {
 }
 
 module.exports = TicketService;
+module.exports.PurchaseError = PurchaseError;

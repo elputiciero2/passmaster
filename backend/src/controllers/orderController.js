@@ -1,24 +1,44 @@
 const Order = require('../models/Order');
 const Ticket = require('../models/Ticket');
 const TicketService = require('../services/ticketService');
+const { PurchaseError } = TicketService;
+const { toInt } = require('../utils/validate');
+
+const MAX_PER_TIER = 10;
 
 class OrderController {
   static async checkout(req, res) {
     try {
-      const { items, paymentInfo } = req.body;
+      const { items, paymentInfo } = req.body || {};
       const userId = req.user.id;
 
-      if (!Array.isArray(items) || items.length === 0) {
+      if (!Array.isArray(items) || items.length === 0 || items.length > 10) {
         return res.status(400).json({
           success: false,
-          message: 'Debe seleccionar al menos un tipo de entrada para comprar.'
+          message: 'Debe seleccionar entre 1 y 10 tipos de entrada para comprar.'
         });
       }
 
+      const cleanItems = items.map((item) => ({
+        tierId: toInt(item && item.tierId, 1, 4294967295),
+        quantity: toInt(item && item.quantity, 1, MAX_PER_TIER)
+      }));
+
+      // Una localidad repetida se validaría dos veces contra el mismo cupo
+      const tierIds = cleanItems.map((item) => item.tierId);
+      if (tierIds.includes(null) || cleanItems.some((item) => item.quantity === null) || new Set(tierIds).size !== tierIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: `Cada localidad debe aparecer una sola vez, con una cantidad entre 1 y ${MAX_PER_TIER}.`
+        });
+      }
+
+      const payment = paymentInfo && typeof paymentInfo === 'object' ? paymentInfo : {};
+
       const result = await TicketService.purchaseTickets({
         userId,
-        items,
-        paymentInfo: paymentInfo || {}
+        items: cleanItems,
+        paymentInfo: { card: payment.card, token: payment.token }
       });
 
       return res.status(201).json({
@@ -27,9 +47,14 @@ class OrderController {
         data: result
       });
     } catch (error) {
-      return res.status(400).json({
+      // Solo los errores de negocio llevan un mensaje pensado para el usuario
+      if (error instanceof PurchaseError) {
+        return res.status(400).json({ success: false, message: error.message });
+      }
+      return res.status(500).json({
         success: false,
-        message: error.message || 'Error al procesar la compra.'
+        message: 'Error al procesar la compra.',
+        error: error.message
       });
     }
   }

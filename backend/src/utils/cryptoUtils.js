@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-const HMAC_SECRET = process.env.QR_HMAC_SECRET || 'passmaster_default_qr_secret_key_2026';
+const HMAC_SECRET = process.env.QR_HMAC_SECRET; // config/env.js garantiza que existe
 
 /**
  * Genera una firma criptográfica HMAC-SHA256 para vincular el ticket de forma infalsificable.

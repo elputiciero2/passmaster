@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const EventController = require('../controllers/eventController');
-const { verifyToken } = require('../middlewares/authMiddleware');
+const { verifyToken, optionalAuth } = require('../middlewares/authMiddleware');
 const { authorizeRoles } = require('../middlewares/roleMiddleware');
 
-// Rutas públicas
-router.get('/', EventController.getAll);
-router.get('/:id', EventController.getById);
+// Rutas públicas; con token de ADMIN o STAFF incluyen eventos no publicados
+router.get('/', optionalAuth, EventController.getAll);
+router.get('/:id', optionalAuth, EventController.getById);
 
 // Rutas administrativas y de aforo en tiempo real
 router.get('/:id/occupancy', verifyToken, authorizeRoles('ADMIN', 'STAFF'), EventController.getRealtimeStats);

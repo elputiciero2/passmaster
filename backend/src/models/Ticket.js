@@ -68,10 +68,11 @@ class Ticket {
     return rows;
   }
 
-  static async updateStatus(ticketId, status, checkedInAt = new Date()) {
+  // Atómico: de dos escaneos simultáneos del mismo boleto solo uno obtiene true
+  static async checkIn(ticketId, checkedInAt = new Date()) {
     const [result] = await pool.query(
-      `UPDATE tickets SET status = ?, checked_in_at = ? WHERE id = ?`,
-      [status, checkedInAt, ticketId]
+      `UPDATE tickets SET status = 'CHECKED_IN', checked_in_at = ? WHERE id = ? AND status = 'ACTIVE'`,
+      [checkedInAt, ticketId]
     );
     return result.affectedRows > 0;
   }

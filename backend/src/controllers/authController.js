@@ -1,23 +1,43 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { isStr, isEmail } = require('../utils/validate');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'passmaster_jwt_secret_super_seguro_2026_xyz';
+const JWT_SECRET = process.env.JWT_SECRET; // config/env.js garantiza que existe
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+// Se compara contra este hash cuando el correo no existe, para que la respuesta tarde lo mismo
+const DUMMY_HASH = bcrypt.hashSync('passmaster-dummy', 10);
+
+const signToken = (user) => jwt.sign(
+  { id: user.id, email: user.email, role: user.role, name: user.name },
+  JWT_SECRET,
+  { expiresIn: JWT_EXPIRES_IN, algorithm: 'HS256' }
+);
 
 class AuthController {
   static async register(req, res) {
     try {
-      const { name, email, password, role } = req.body;
+      const { name, email, password } = req.body || {};
 
-      if (!name || !email || !password) {
+      if (!isStr(name, 120) || !isEmail(email)) {
         return res.status(400).json({
           success: false,
-          message: 'Todos los campos (nombre, correo y contraseña) son obligatorios.'
+          message: 'Nombre y correo electrónico válidos son obligatorios.'
         });
       }
 
-      const existingUser = await User.findByEmail(email);
+      // bcrypt ignora lo que pase de 72 bytes
+      if (typeof password !== 'string' || password.length < 8 || password.length > 72) {
+        return res.status(400).json({
+          success: false,
+          message: 'La contraseña debe tener entre 8 y 72 caracteres.'
+        });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const existingUser = await User.findByEmail(normalizedEmail);
       if (existingUser) {
         return res.status(409).json({
           success: false,
@@ -25,32 +45,16 @@ class AuthController {
         });
       }
 
-      const salt = await bcrypt.genSalt(10);
-      const password_hash = await bcrypt.hash(password, salt);
+      const password_hash = await bcrypt.hash(password, 10);
 
-      // Solo ADMIN puede registrar otros ADMIN o STAFF desde el panel, por defecto es CUSTOMER
-      const assignedRole = role === 'STAFF' ? 'STAFF' : 'CUSTOMER';
-
-      const userId = await User.create({
-        name,
-        email,
-        password_hash,
-        role: assignedRole
-      });
-
-      const token = jwt.sign(
-        { id: userId, email, role: assignedRole, name },
-        JWT_SECRET,
-        { expiresIn: JWT_EXPIRES_IN }
-      );
+      // El registro público solo crea compradores: el rol nunca se toma de la petición
+      const user = { name: name.trim(), email: normalizedEmail, role: 'CUSTOMER' };
+      user.id = await User.create({ ...user, password_hash });
 
       return res.status(201).json({
         success: true,
         message: 'Usuario registrado exitosamente.',
-        data: {
-          user: { id: userId, name, email, role: assignedRole },
-          token
-        }
+        data: { user, token: signToken(user) }
       });
     } catch (error) {
       return res.status(500).json({
@@ -63,48 +67,31 @@ class AuthController {
 
   static async login(req, res) {
     try {
-      const { email, password } = req.body;
+      const { email, password } = req.body || {};
 
-      if (!email || !password) {
+      if (!isEmail(email) || typeof password !== 'string' || !password || password.length > 72) {
         return res.status(400).json({
           success: false,
           message: 'Debe ingresar su correo y contraseña.'
         });
       }
 
-      const user = await User.findByEmail(email);
-      if (!user) {
+      const user = await User.findByEmail(email.trim().toLowerCase());
+      const isMatch = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
+
+      if (!user || !isMatch) {
         return res.status(401).json({
           success: false,
           message: 'Credenciales inválidas.'
         });
       }
-
-      const isMatch = await bcrypt.compare(password, user.password_hash);
-      if (!isMatch) {
-        return res.status(401).json({
-          success: false,
-          message: 'Credenciales inválidas.'
-        });
-      }
-
-      const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role, name: user.name },
-        JWT_SECRET,
-        { expiresIn: JWT_EXPIRES_IN }
-      );
 
       return res.json({
         success: true,
         message: 'Inicio de sesión exitoso.',
         data: {
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            role: user.role
-          },
-          token
+          user: { id: user.id, name: user.name, email: user.email, role: user.role },
+          token: signToken(user)
         }
       });
     } catch (error) {

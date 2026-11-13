@@ -30,7 +30,7 @@ class QRService {
         parsed = rawScannedData;
       }
 
-      if (!parsed.code || !parsed.sig) {
+      if (!parsed || typeof parsed.code !== 'string' || typeof parsed.sig !== 'string') {
         return { valid: false, error: 'Payload de QR con estructura incorrecta' };
       }
 

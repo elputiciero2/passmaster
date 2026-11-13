@@ -12,13 +12,14 @@ export default function EventDetailPage({ eventId, onBack, onPurchaseSuccess, on
   const [error, setError] = useState('');
   const [successData, setSuccessData] = useState(null);
 
-  // Datos simulados de tarjeta para la pasarela de pagos
+  // Precargado con la tarjeta de prueba aprobada del sandbox
   const [paymentData, setPaymentData] = useState({
-    cardNumber: '4242 •••• •••• 4242',
+    cardNumber: '4242 4242 4242 4242',
     cardHolder: 'Titular de Prueba',
-    expDate: '12/28',
+    expDate: '12/30',
     cvv: '123'
   });
+  const setPaymentField = (field) => (e) => setPaymentData({ ...paymentData, [field]: e.target.value });
 
   useEffect(() => {
     async function loadDetail() {
@@ -75,7 +76,12 @@ export default function EventDetailPage({ eventId, onBack, onPurchaseSuccess, on
     try {
       const res = await api.checkout(items, {
         method: 'card',
-        cardHolder: paymentData.cardHolder
+        card: {
+          number: paymentData.cardNumber,
+          holder: paymentData.cardHolder,
+          expDate: paymentData.expDate,
+          cvv: paymentData.cvv
+        }
       });
 
       setSuccessData(res.data);
@@ -287,41 +293,69 @@ export default function EventDetailPage({ eventId, onBack, onPurchaseSuccess, on
               <div className="flex items-center justify-between text-xs font-semibold text-slate-300 uppercase">
                 <span className="flex items-center gap-1.5 text-emerald-400">
                   <CreditCard className="w-4 h-4" />
-                  <span>Pasarela Integrada (Stripe / Sandbox)</span>
+                  <span>Pasarela de Pago (Sandbox)</span>
                 </span>
-                <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300">Modo Seguro</span>
+                <span className="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-300">Modo de Prueba</span>
               </div>
 
               <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs">
                 <div>
-                  <label className="text-[10px] text-slate-400 block uppercase">Número de Tarjeta</label>
+                  <label htmlFor="card-holder" className="text-[10px] text-slate-400 block uppercase">Titular de la Tarjeta</label>
                   <input
+                    id="card-holder"
                     type="text"
-                    disabled
+                    autoComplete="cc-name"
+                    maxLength={100}
+                    value={paymentData.cardHolder}
+                    onChange={setPaymentField('cardHolder')}
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 text-xs"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="card-number" className="text-[10px] text-slate-400 block uppercase">Número de Tarjeta</label>
+                  <input
+                    id="card-number"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="cc-number"
+                    maxLength={23}
                     value={paymentData.cardNumber}
-                    className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs cursor-not-allowed"
+                    onChange={setPaymentField('cardNumber')}
+                    className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] text-slate-400 block uppercase">Expira</label>
+                    <label htmlFor="card-exp" className="text-[10px] text-slate-400 block uppercase">Expira (MM/AA)</label>
                     <input
+                      id="card-exp"
                       type="text"
-                      disabled
+                      autoComplete="cc-exp"
+                      placeholder="MM/AA"
+                      maxLength={5}
                       value={paymentData.expDate}
-                      className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs cursor-not-allowed"
+                      onChange={setPaymentField('expDate')}
+                      className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-400 block uppercase">CVV</label>
+                    <label htmlFor="card-cvv" className="text-[10px] text-slate-400 block uppercase">CVV</label>
                     <input
-                      type="text"
-                      disabled
+                      id="card-cvv"
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="cc-csc"
+                      maxLength={4}
                       value={paymentData.cvv}
-                      className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs cursor-not-allowed"
+                      onChange={setPaymentField('cvv')}
+                      className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs"
                     />
                   </div>
                 </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Tarjetas de prueba: 4242 4242 4242 4242 se aprueba; 4000 0000 0000 0002 se rechaza;
+                  4000 0000 0000 9995 no tiene fondos. No se realiza ningún cobro real.
+                </p>
               </div>
             </div>
 

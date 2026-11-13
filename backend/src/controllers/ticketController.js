@@ -30,8 +30,8 @@ class TicketController {
         });
       }
 
-      // Validar permisos: solo el comprador, staff o admin
-      if (ticket.buyer_email !== req.user.email && !['ADMIN', 'STAFF'].includes(req.user.role)) {
+      // Solo el comprador o un admin: el QR lleva la firma, y quien lo vea puede clonar el boleto
+      if (ticket.buyer_email !== req.user.email && req.user.role !== 'ADMIN') {
         return res.status(403).json({
           success: false,
           message: 'No tienes autorización para acceder a este boleto.'
